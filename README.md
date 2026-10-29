@@ -2,10 +2,7 @@
 
 App web de orçamento de obras (EAP, composições, insumos, formação de preço, documentos e exportações em Excel e PDF) do Setor de orçamentos.
 
-O mesmo código roda de duas formas:
-
-- **Versão web (Vercel + Supabase)**: https://teste01-woad.vercel.app, com login por e-mail e senha e o banco no Supabase (projeto `djbxyriievywikbuogqs`).
-- **Artifact no claude.ai** (versão de origem): https://claude.ai/artifact/EfkeyF35kthKkYZ5GNcKEn, com o banco do próprio Artifact.
+Site: https://teste01-woad.vercel.app, com login por e-mail e senha e o banco no Supabase (projeto `djbxyriievywikbuogqs`). O sistema nasceu como Artifact no claude.ai; os dados foram migrados para o Supabase e o Artifact foi apagado em 29/10/2026.
 
 | Arquivo | Função |
 |---|---|
@@ -14,7 +11,8 @@ O mesmo código roda de duas formas:
 | `web/config.js` | Endereço e chave pública (publishable) do Supabase. Nunca colocar a chave secret/service_role |
 | `web/importar.html` | Importação de um backup (`/importar`) |
 | `web/vendor/supabase.js` | Biblioteca do Supabase (2.118.0) |
-| `supabase/schema.sql` | Tabela `documentos`, regras de acesso, tempo real e bucket `imagens` |
+| `supabase/schema.sql` | Tabela `documentos`, regras de acesso, tempo real, bucket `imagens` e histórico de versões |
+| `supabase/teste/`, `.github/workflows/teste-banco.yml` | Teste automático do `schema.sql` |
 | `vercel.json` | Publicação: a Vercel roda `node build.mjs` e publica `dist/site` |
 
 ## Teste local
@@ -40,9 +38,31 @@ e abrir http://localhost:8765/. O teste local usa um banco simulado guardado no 
 
 Qualquer e-mail pode ter acesso, mas só quem for cadastrado: Supabase > Authentication > Users > **Invite user** (a pessoa recebe um e-mail para criar a senha) ou **Add user > Create new user** (você define a senha e marca Auto Confirm User). Para tirar o acesso, excluir o usuário na mesma tela.
 
-## Migração dos dados do Artifact
+## Histórico de versões
 
-O backup com os dados do Artifact fica fora do repositório (pasta "backup orcamentos (NAO enviar ao GitHub)"). Depois de configurar o Supabase e publicar, entrar no site, abrir `/importar`, escolher o arquivo e clicar em Importar. A imagem do modelo 3D é enviada junto.
+Antes de cada alteração ou exclusão, o banco guarda a versão anterior em `documentos_historico`: uma versão a cada 30 minutos de edição da mesma pessoa no mesmo bloco, e sempre que outra pessoa assume ou algo é excluído. As versões ficam 90 dias.
+
+Cada orçamento é gravado em vários blocos (dados, itens, composições, insumos, extras e projetos), então o normal é voltar o orçamento inteiro a um momento (Supabase > SQL Editor):
+
+```sql
+-- 1. achar o orçamento e os momentos com versões guardadas
+select caminho, dados ->> 'nome' as nome from documentos where colecao = 'orcamentos';
+select arquivado_em, atualizado_por, operacao, caminho
+  from documentos_versoes where orcamento = '<id>' order by arquivado_em desc;
+
+-- 2. voltar o orçamento ao que era no momento escolhido (horário de Brasília)
+select restaurar_ate('orcamentos/<id>', '2026-10-29 14:00 -03');
+```
+
+O mesmo vale para o catálogo: `restaurar_ate('cat_insumos', ...)` e `restaurar_ate('cat_cpus', ...)`. Um orçamento excluído também volta assim, com um momento anterior à exclusão.
+
+Para um único bloco: `select restaurar_versao(<id da versão>);`.
+
+O estado atual é guardado no histórico antes de restaurar, então a restauração pode ser desfeita do mesmo jeito. Quem estiver com o sistema aberto recebe a versão restaurada na hora.
+
+## Backup
+
+O backup dos dados migrados do Artifact fica fora do repositório (pasta "backup orcamentos (NAO enviar ao GitHub)"). Para restaurar um backup: entrar no site, abrir `/importar`, escolher o arquivo e clicar em Importar. As imagens vão junto.
 
 Backups com dados (`*backup*.json`) não devem entrar neste repositório; o `.gitignore` já os bloqueia.
 

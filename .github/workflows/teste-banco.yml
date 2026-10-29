@@ -1,0 +1,39 @@
+# Testa o supabase/schema.sql num Postgres limpo a cada mudança no banco:
+# gravação com merge, acesso, histórico de versões e restauração.
+name: Teste do banco
+
+on:
+  push:
+    paths: ['supabase/**', '.github/workflows/teste-banco.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  teste:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: teste
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: teste
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Simular Supabase
+        run: psql -v ON_ERROR_STOP=1 -f supabase/teste/supabase_simulado.sql
+      - name: Rodar schema.sql
+        run: psql -v ON_ERROR_STOP=1 -f supabase/schema.sql
+      - name: Rodar schema.sql de novo (não pode dar erro)
+        run: psql -v ON_ERROR_STOP=1 -f supabase/schema.sql
+      - name: Testar gravação, acesso, histórico e restauração
+        run: psql -v ON_ERROR_STOP=1 -f supabase/teste/teste_banco.sql
