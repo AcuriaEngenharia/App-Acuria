@@ -4,7 +4,7 @@ App web de orçamento de obras (EAP, composições, insumos, formação de preç
 
 O mesmo código roda de duas formas:
 
-- **Versão web (Vercel + Supabase)**: página publicada na Vercel, com login por e-mail e senha e o banco no Supabase.
+- **Versão web (Vercel + Supabase)**: https://teste01-woad.vercel.app, com login por e-mail e senha e o banco no Supabase (projeto `djbxyriievywikbuogqs`).
 - **Artifact no claude.ai** (versão de origem): https://claude.ai/artifact/EfkeyF35kthKkYZ5GNcKEn, com o banco do próprio Artifact.
 
 | Arquivo | Função |
