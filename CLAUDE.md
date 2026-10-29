@@ -2,7 +2,7 @@
 
 App web de orçamento de obras do Setor de orçamentos da Unità Engenharia, com banco compartilhado entre a equipe. O app usa só a interface do runtime de Artifacts (`window.claude.use('db' | 'downloads' | 'assets' | 'user')`), que tem três implementações:
 
-- Versão web (Vercel + Supabase, em migração desde 29/10/2026): `web/supabase-claude.js` entrega o mesmo `window.claude` com login e banco no Supabase (tabela `documentos`, um documento por linha, endereçado pelo caminho).
+- Versão web (Vercel + Supabase, em migração desde 29/10/2026; site https://teste01-woad.vercel.app, Supabase `djbxyriievywikbuogqs`): `web/supabase-claude.js` entrega o mesmo `window.claude` com login e banco no Supabase (tabela `documentos`, um documento por linha, endereçado pelo caminho).
 - Artifact no claude.ai (https://claude.ai/artifact/EfkeyF35kthKkYZ5GNcKEn): runtime do próprio claude.ai.
 - Teste local: `dev/mock-claude.js`, banco no localStorage.
 
