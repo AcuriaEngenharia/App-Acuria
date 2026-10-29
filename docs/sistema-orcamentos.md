@@ -43,5 +43,11 @@ Modelo do cliente: `assets/modelo-cliente.xlsx`, limpo a partir de "ORC - EXE - 
 ## Estado do banco (28/09/2026)
 - O orçamento 117 foi importado como R01 (16 etapas, 739 serviços, 394 CPUs, 622 insumos, 182 premissas, 29 exclusões, 2.477 projetos, 383 meses de INCC, imagem 3D). Depois o banco passou a ter apenas a R02 (id mulgejm0w35kh3); a R01 (orc117r01) não existe mais.
 - Numeração herdada do ERP no 117: 45 dos 928 itens diferem da sequência automática (ex.: 04.01.051, 03.02.01.221).
-- Na R02 o insumo IM00031 (Sarrafo 2x15cm) estava com preço R$ 1.000.000,00 (era R$ 5,00), levando o custo raso a cerca de R$ 628,5 mi. Pendente confirmar se foi intencional.
+- Na R02 o insumo IM00031 (Sarrafo 2x15cm) chegou a ficar com preço R$ 1.000.000,00 (era R$ 5,00). Conferido em 29/10/2026: já estava de volta a R$ 5,00 no catálogo e no orçamento; custo raso R$ 64.742.579,58, direto R$ 52.872.928,52, venda R$ 71.201.059,85.
+
+## Versão web (Vercel + Supabase)
+- Iniciada em 29/10/2026. O app não muda: `web/supabase-claude.js` implementa o mesmo `window.claude` (db, downloads, assets, user) sobre o Supabase.
+- Banco: tabela `documentos` (caminho, colecao, dados jsonb). `update` vira a função `documento_atualizar`, que faz o merge aninhado no próprio banco (`jsonb_mesclar`, null apaga a chave), então duas pessoas gravando o mesmo bloco não se sobrescrevem. Tempo real pelo Supabase Realtime.
+- Imagens no bucket público `imagens` (nome aleatório). Login por e-mail e senha, qualquer domínio, cadastro só pelo painel (signup desligado).
+- Migração: backup do banco do Artifact em 29/10/2026 (63 documentos e a imagem do modelo 3D), para importar pela página `/importar`. Conferido num Supabase simulado: o 117 R02 abre com os mesmos totais gravados.
 - Grupo dos insumos inferido pelo prefixo do código na importação (IM material, IS serviços, IP mão de obra/verba).
