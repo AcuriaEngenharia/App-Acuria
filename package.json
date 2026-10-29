@@ -1,0 +1,12 @@
+{
+  "name": "sistema-orcamentos-unita",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema de orçamentos de obras da Unità Engenharia (app web publicado como Artifact no claude.ai)",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "serve": "node dev/serve.mjs",
+    "dev": "node build.mjs && node dev/serve.mjs"
+  }
+}
