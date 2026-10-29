@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Importar backup · Orçamentos Unità</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+<style>
+  body{margin:0;background:#F4F4F3;font-family:'Inter',system-ui,sans-serif;color:#000}
+  main{max-width:640px;margin:48px auto;padding:0 16px}
+  .cx{background:#FFF;border:1px solid #D0D0CE;border-radius:12px;padding:28px;display:flex;flex-direction:column;gap:14px}
+  h1{margin:0;font-size:20px;color:#373A36}
+  p{margin:0;font-size:14px;line-height:1.5;color:#373A36}
+  button{height:40px;border:0;border-radius:8px;background:#FE5000;color:#FFF;font:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:0 18px;align-self:flex-start}
+  button[disabled]{opacity:.5;cursor:default}
+  pre{margin:0;background:#F4F4F3;border-radius:8px;padding:12px;font-size:12px;white-space:pre-wrap;max-height:320px;overflow:auto}
+  .rod{font-size:12px;color:#373A36;text-align:center;margin-top:20px;line-height:1.6}
+</style>
+</head>
+<body>
+<main>
+  <div class="cx">
+    <h1>Importar backup</h1>
+    <p>Grava no banco todos os documentos de um arquivo de backup do sistema (formato <code>orcamentos-backup-*.json</code>) e envia as imagens junto. Documentos com o mesmo caminho são substituídos; os demais ficam como estão.</p>
+    <input type="file" id="arq" accept=".json,application/json">
+    <button type="button" id="bImp" disabled>Importar</button>
+    <pre id="log" hidden></pre>
+  </div>
+  <div class="rod">© <span id="ano"></span> Unità Engenharia. Todos os direitos reservados.<br>Setor de orçamentos | Unità</div>
+</main>
+<script src="vendor/supabase.js"></script>
+<script src="config.js"></script>
+<script src="supabase-claude.js"></script>
+<script>
+(async function () {
+  document.getElementById('ano').textContent = new Date().getFullYear();
+  const $ = id => document.getElementById(id), log = $('log');
+  const escreve = t => { log.hidden = false; log.textContent += t + '\n'; log.scrollTop = log.scrollHeight; };
+  const db = await window.claude.use('db'), assets = await window.claude.use('assets');
+  let B = null;
+  $('arq').onchange = async e => {
+    B = null; $('bImp').disabled = true; log.textContent = '';
+    const f = e.target.files[0]; if (!f) return;
+    try { B = JSON.parse(await f.text()); } catch (err) { escreve('Arquivo inválido: ' + err.message); return; }
+    if (!B || !B.documentos) { B = null; escreve('O arquivo não tem a lista de documentos.'); return; }
+    const n = Object.keys(B.documentos).length, ni = Object.keys(B.imagens || {}).length;
+    escreve(`${n} documentos e ${ni} ${ni === 1 ? 'imagem' : 'imagens'} no arquivo (exportado em ${B.exportado_em || '?'}).`);
+    const ja = await db.collection('orcamentos').get();
+    if (ja.docs.length) escreve(`Atenção: o banco já tem ${ja.docs.length} orçamentos. Os documentos do arquivo vão substituir os de mesmo caminho.`);
+    $('bImp').disabled = false;
+  };
+  $('bImp').onclick = async () => {
+    if (!B) return; $('bImp').disabled = true; $('arq').disabled = true;
+    try {
+      // imagens primeiro: os documentos guardam o endereço delas, que muda no novo banco
+      const troca = {};
+      for (const [id, im] of Object.entries(B.imagens || {})) {
+        const bytes = Uint8Array.from(atob(im.base64), c => c.charCodeAt(0));
+        const a = await assets.upload(new File([bytes], im.nome || id, { type: im.tipo || 'application/octet-stream' }));
+        troca[id] = a; escreve('Imagem enviada: ' + (im.nome || id));
+      }
+      let txt = JSON.stringify(B.documentos);
+      for (const [id, a] of Object.entries(troca)) txt = txt.split('"/_blob/' + id + '"').join(JSON.stringify(a.url)).split('"' + id + '"').join(JSON.stringify(a.id));
+      const docs = Object.entries(JSON.parse(txt));
+      let i = 0;
+      for (const [caminho, dados] of docs) { await db.doc(caminho).set(dados); if (++i % 10 === 0 || i === docs.length) escreve(`${i} de ${docs.length} documentos gravados.`); }
+      escreve('Importação concluída. Abra o sistema na página inicial.');
+    } catch (err) { console.error(err); escreve('Falha: ' + (err.code || '') + ' ' + err.message + '. Nada é desfeito; dá para rodar de novo.'); $('bImp').disabled = false; $('arq').disabled = false; }
+  };
+})();
+</script>
+</body>
+</html>

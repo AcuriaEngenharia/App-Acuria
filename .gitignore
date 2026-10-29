@@ -1,2 +1,5 @@
 dist/
 node_modules/
+# Nunca enviar backups com dados de orçamentos
+*backup*.json
+.vercel

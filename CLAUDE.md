@@ -1,6 +1,12 @@
 # Sistema de Orçamentos Unità
 
-App web de orçamento de obras do Setor de orçamentos da Unità Engenharia. Roda como Artifact publicado no claude.ai (https://claude.ai/artifact/EfkeyF35kthKkYZ5GNcKEn), com banco compartilhado entre a equipe. Não há backend próprio: o banco, os downloads e o armazenamento de imagens vêm do runtime de Artifacts (`window.claude.use('db' | 'downloads' | 'assets' | 'user')`).
+App web de orçamento de obras do Setor de orçamentos da Unità Engenharia, com banco compartilhado entre a equipe. O app usa só a interface do runtime de Artifacts (`window.claude.use('db' | 'downloads' | 'assets' | 'user')`), que tem três implementações:
+
+- Versão web (Vercel + Supabase, em migração desde 29/10/2026): `web/supabase-claude.js` entrega o mesmo `window.claude` com login e banco no Supabase (tabela `documentos`, um documento por linha, endereçado pelo caminho).
+- Artifact no claude.ai (https://claude.ai/artifact/EfkeyF35kthKkYZ5GNcKEn): runtime do próprio claude.ai.
+- Teste local: `dev/mock-claude.js`, banco no localStorage.
+
+Mudanças no app não devem depender de qual delas está rodando. Se o app passar a usar algo novo do runtime, implementar nas três.
 
 Regras de negócio, modelo de dados e histórico de decisões: `docs/sistema-orcamentos.md`. Ler antes de mexer em cálculo, importação ou exportação.
 
@@ -12,7 +18,10 @@ src/js/01..08-*.js    código do app, concatenado em ordem alfabética num únic
 assets/               modelo-cliente.xlsx (modelo da planilha do cliente) e fontes Inter (PDF e reserva da interface)
 dev/mock-claude.js    simulação local de window.claude (banco em localStorage)
 dev/serve.mjs         servidor estático para testar dist/local.html
-build.mjs             gera dist/
+web/                  versão web: supabase-claude.js (login + banco), config.js, importar.html, vendor/supabase.js
+supabase/schema.sql   banco da versão web (tabela documentos, merge aninhado jsonb_mesclar, RLS, tempo real, bucket imagens)
+vercel.json           a Vercel roda node build.mjs e publica dist/site
+build.mjs             gera dist/ (Artifact e teste local) e dist/site/ (versão web)
 docs/                 documentação funcional
 ```
 
@@ -42,13 +51,16 @@ As bibliotecas (ExcelJS, SheetJS, jsPDF, jspdf-autotable, JSZip) são carregadas
 
 ## Publicação
 
-O Artifact recebe `dist/index.html` como página (sem esqueleto `<html>`; o claude.ai envolve) e três arquivos de apoio na raiz: `modelo-cliente.txt`, `Inter-Regular.ttf`, `Inter-Bold.ttf`. Capabilities: `db`, `downloads`, `assets`. Publicar sempre na mesma URL para manter o banco compartilhado; uma URL nova nasce com banco vazio.
+Versão web: a Vercel publica a partir do GitHub (orcamentosunita/teste01), rodando `node build.mjs` e servindo `dist/site`. Toda mudança vai num branch com Pull Request; o link de teste (preview) da Vercel usa o mesmo banco do Supabase, então os dados são reais. Não fazer merge nem Promote to Production sem pedido explícito do usuário. Dados de configuração do Supabase em `web/config.js`; mudanças no banco em `supabase/schema.sql`, que precisa poder rodar de novo sem perder dados.
+
+Artifact: recebe `dist/index.html` como página (sem esqueleto `<html>`; o claude.ai envolve) e três arquivos de apoio na raiz: `modelo-cliente.txt`, `Inter-Regular.ttf`, `Inter-Bold.ttf`. Capabilities: `db`, `downloads`, `assets`. Publicar sempre na mesma URL para manter o banco compartilhado; uma URL nova nasce com banco vazio.
 
 A publicação é feita por uma sessão do Claude com a ferramenta de Artifacts (claude.ai ou Cowork). Antes de publicar, ler a versão no ar e conferir se alguém publicou por outra sessão.
 
 ## Cuidados
 
-- O banco é compartilhado e em produção. Não escrever nele em teste; usar `dist/local.html`.
+- Os bancos (Supabase e Artifact) são compartilhados e em produção. Não escrever neles em teste; usar `dist/local.html`.
+- Backups com dados reais (`*backup*.json`) nunca vão ao repositório.
 - Escritas usam `update` com merge aninhado (null apaga a chave). Catálogo e partes do orçamento ficam em chunks de documentos (`putMany`); não mudar o número de chunks (N_INS, N_CPU, N_PART) sem migrar os dados.
 - `modelo-cliente.xlsx` foi limpo a partir do arquivo real do cliente (sem Power Query, links externos e calcChain). O script de limpeza original não foi preservado; se o modelo mudar, refazer a limpeza e conferir a saída no Excel/LibreOffice.
 - Números com vírgula decimal e ponto de milhar (pt-BR) em toda a interface: usar `fmt`, `money`, `parseNum`.
