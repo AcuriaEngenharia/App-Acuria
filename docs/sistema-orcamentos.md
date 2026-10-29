@@ -1,6 +1,6 @@
 # Sistema de Orçamentos Unità (app web)
 
-Artifact: https://claude.ai/artifact/EfkeyF35kthKkYZ5GNcKEn (capabilities: db, downloads, assets). Versão 12, publicada em 28/09/2026; código migrado para este repositório em 29/10/2026 a partir dessa versão.
+Origem: Artifact no claude.ai (capabilities: db, downloads, assets), versão 12 de 28/09/2026. Código migrado para este repositório em 29/10/2026; dados migrados para o Supabase no mesmo dia; Artifact apagado em 29/10/2026, depois de conferido que os dados não tinham mudado desde o backup.
 Modelo do cliente: `assets/modelo-cliente.xlsx`, limpo a partir de "ORC - EXE - TEEN x BRESSER 1 COND. A - R01.xlsx" e publicado em base64 como `modelo-cliente.txt`. Fontes Inter-Regular.ttf e Inter-Bold.ttf publicadas junto (usadas no PDF e como reserva da interface).
 
 ## Modelo de dados (banco do artifact)
@@ -49,5 +49,6 @@ Modelo do cliente: `assets/modelo-cliente.xlsx`, limpo a partir de "ORC - EXE - 
 - Iniciada em 29/10/2026. O app não muda: `web/supabase-claude.js` implementa o mesmo `window.claude` (db, downloads, assets, user) sobre o Supabase.
 - Banco: tabela `documentos` (caminho, colecao, dados jsonb). `update` vira a função `documento_atualizar`, que faz o merge aninhado no próprio banco (`jsonb_mesclar`, null apaga a chave), então duas pessoas gravando o mesmo bloco não se sobrescrevem. Tempo real pelo Supabase Realtime.
 - Imagens no bucket público `imagens` (nome aleatório). Login por e-mail e senha, qualquer domínio, cadastro só pelo painel (signup desligado).
-- Migração: backup do banco do Artifact em 29/10/2026 (63 documentos e a imagem do modelo 3D), para importar pela página `/importar`. Conferido num Supabase simulado: o 117 R02 abre com os mesmos totais gravados.
+- Migração: backup do banco do Artifact em 29/10/2026 (63 documentos e a imagem do modelo 3D), importado pela página `/importar`. Conferido no Supabase: 63 documentos, totais do 117 R02 iguais aos do Artifact.
+- Histórico de versões: gatilho guarda a versão anterior de cada documento (a cada 30 min por pessoa e documento, sempre em troca de autor, exclusão e restauração), por 90 dias. `restaurar_ate(prefixo, momento)` volta um orçamento inteiro ou o catálogo; `restaurar_versao(id)` volta um bloco. Coluna `criado_em` em `documentos` permite excluir na restauração os blocos criados depois do momento.
 - Grupo dos insumos inferido pelo prefixo do código na importação (IM material, IS serviços, IP mão de obra/verba).
